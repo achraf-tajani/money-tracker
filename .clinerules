@@ -1,0 +1,603 @@
+# Money Tracker App - Instructions pour Claude Code
+
+## 🎯 Contexte du projet
+
+Tu es l'assistant de développement pour une application web/mobile de gestion de budget personnel avec système de cycles mensuels.
+L'utilisateur souhaite un MVP moderne, innovant, animé et responsive (mobile + tablette + desktop).
+
+## 📐 Stack technique VALIDÉE
+
+### Frontend obligatoire
+- React 18+ avec TypeScript
+- Vite (bundler rapide)
+- Tailwind CSS 3+ (styling responsive)
+- shadcn/ui (composants UI)
+- Zustand (state management)
+- React Router v6 (navigation)
+- React Hook Form + Zod (formulaires)
+- Recharts (graphiques)
+- Lucide React (icons)
+- date-fns (manipulation dates)
+
+### Animations & UX
+- Framer Motion (animations fluides)
+- react-confetti (célébrations)
+- react-hot-toast (notifications animées)
+- Auto Animate (animations automatiques)
+
+### Backend & Database
+- **Supabase** (PostgreSQL + Auth + Storage + Realtime)
+- @supabase/supabase-js (client JavaScript)
+- @supabase/auth-helpers-react (hooks auth)
+
+### PWA & Mobile
+- vite-plugin-pwa (Progressive Web App)
+- workbox (service worker)
+- Installation mobile native
+
+### Architecture
+- Composants fonctionnels avec hooks
+- Separation of concerns (components/lib/hooks/store)
+- Mobile-first responsive design
+- Accessibilité (a11y) respectée
+
+## 🎨 Design System & Animations
+
+### Style visuel
+- **Glassmorphisme** : Cards avec backdrop-blur et transparence
+- **Neumorphisme soft** : Ombres douces sur boutons
+- **Gradients animés** : Backgrounds qui évoluent lentement
+- **Micro-interactions** : Feedback visuel sur toutes les actions
+- **Transitions fluides** : 200-300ms ease-in-out
+- **Dark mode** : Par défaut avec toggle light
+
+### Palette de couleurs
+```css
+/* Primary - Violet */
+--primary-50: #F5F3FF
+--primary-500: #8B5CF6
+--primary-600: #7C3AED
+--primary-900: #4C1D95
+
+/* Success - Vert */
+--success-500: #10B981
+
+/* Warning - Orange */
+--warning-500: #F59E0B
+
+/* Danger - Rouge */
+--danger-500: #EF4444
+
+/* Backgrounds */
+--dark-bg: #0F172A
+--dark-card: #1E293B
+--light-bg: #F8FAFC
+--light-card: #FFFFFF
+```
+
+### Typography
+- Font principale : Inter (Google Fonts)
+- Tailles : text-xs (12px) → text-5xl (48px)
+- Line-height : leading-relaxed (1.5) pour corps, leading-tight (1.2) pour titres
+- Font weights : 300 (light), 400 (normal), 500 (medium), 600 (semibold), 700 (bold)
+
+### Animations prévues
+1. **Confetti léger** : Quand ajout d'une dépense (react-confetti)
+2. **Counter animation** : Les chiffres qui comptent jusqu'au montant
+3. **Graphs animés** : Recharts avec animations au mount
+4. **Cards hover** : Légère élévation + scale(1.02)
+5. **Gradients animés** : animate-gradient sur backgrounds
+6. **Page transitions** : Slide/Fade avec Framer Motion
+7. **Toast notifications** : Slide-in avec react-hot-toast
+8. **Skeleton loading** : Pendant chargement des données
+9. **Swipe gestures** : Sur mobile pour naviguer
+10. **Haptic feedback** : Vibrations légères sur actions (mobile)
+
+### Responsive Breakpoints
+```css
+/* Mobile first */
+default: < 640px (mobile)
+sm: 640px (large mobile)
+md: 768px (tablet)
+lg: 1024px (desktop)
+xl: 1280px (large desktop)
+```
+
+### Layout par device
+**Mobile (< 768px)**
+- Bottom navigation bar (fixe)
+- Cards full-width
+- Formulaire modal plein écran
+- Swipe pour naviguer entre sections
+- Hamburger menu
+
+**Tablette (768px - 1024px)**
+- Sidebar slide-in
+- Grille 2 colonnes pour dashboard
+- Formulaire en drawer (côté droit)
+- Touch-friendly (boutons 44px min)
+
+**Desktop (> 1024px)**
+- Sidebar fixe à gauche
+- Grille 3 colonnes pour dashboard
+- Formulaire en modal centré
+- Hover states riches
+
+## 📊 Modèle de données Supabase
+
+### Tables principales
+```typescript
+// 1. users (géré par Supabase Auth automatiquement)
+
+// 2. cycles_mensuels
+interface CycleMensuel {
+  id: string; // uuid
+  user_id: string; // uuid -> auth.users
+  annee: number; // 2024
+  mois: number; // 1-12
+  salaire_reel: number; // montant effectif du salaire
+  total_charges: number; // calculé
+  total_depenses: number; // calculé
+  reste: number; // calculé : salaire - charges - depenses
+  statut: 'actif' | 'cloture';
+  date_debut: Date; // 1er du mois
+  date_fin: Date; // dernier jour du mois
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// 3. revenus
+interface Revenu {
+  id: string;
+  user_id: string;
+  nom: string; // "Salaire", "Prime", "Aide"
+  montant: number; // montant par défaut
+  recurrent: boolean; // mensuel ou ponctuel
+  date_debut: Date;
+  date_fin?: Date; // null si toujours actif
+  created_at: Date;
+}
+
+// 4. charges_fixes
+interface ChargeFix {
+  id: string;
+  user_id: string;
+  nom: string; // "Loyer", "Assurance auto"
+  montant: number;
+  categorie_id: string; // -> categories
+  jour_prelevement: number; // 1-31
+  actif: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// 5. categories
+interface Categorie {
+  id: string;
+  user_id?: string; // null pour catégories par défaut
+  nom: string;
+  icon: string; // nom icône Lucide (ex: "Home", "Car")
+  couleur: string; // hex color
+  budget_max?: number; // alerte si dépassé
+  type: 'charge' | 'depense';
+  created_at: Date;
+}
+
+// 6. depenses
+interface Depense {
+  id: string;
+  user_id: string;
+  cycle_id: string; // -> cycles_mensuels
+  montant: number;
+  categorie_id: string; // -> categories
+  date: Date;
+  description?: string;
+  tags?: string[]; // array postgres
+  created_at: Date;
+  updated_at: Date;
+}
+
+// 7. comparaisons_mensuelles (vue calculée)
+interface ComparaisonMensuelle {
+  cycle_id: string;
+  categorie_id: string;
+  total_depense: number;
+  variation_vs_precedent: number; // %
+}
+```
+
+### Catégories par défaut (à insérer)
+```typescript
+const categoriesDefaut = [
+  { nom: 'Loyer', icon: 'Home', couleur: '#EF4444', type: 'charge' },
+  { nom: 'Assurance', icon: 'Shield', couleur: '#F59E0B', type: 'charge' },
+  { nom: 'Factures', icon: 'FileText', couleur: '#3B82F6', type: 'charge' },
+  { nom: 'Courses', icon: 'ShoppingCart', couleur: '#10B981', type: 'depense' },
+  { nom: 'Transport', icon: 'Car', couleur: '#6366F1', type: 'depense' },
+  { nom: 'Loisirs', icon: 'Gamepad2', couleur: '#8B5CF6', type: 'depense' },
+  { nom: 'Santé', icon: 'Heart', couleur: '#EC4899', type: 'depense' },
+  { nom: 'Restaurant', icon: 'UtensilsCrossed', couleur: '#F59E0B', type: 'depense' },
+  { nom: 'Vêtements', icon: 'Shirt', couleur: '#14B8A6', type: 'depense' },
+  { nom: 'Divers', icon: 'MoreHorizontal', couleur: '#64748B', type: 'depense' },
+];
+```
+
+## 🏗️ Structure du projet
+```
+money-tracker/
+├── src/
+│   ├── components/
+│   │   ├── ui/              # shadcn components (Button, Card, etc.)
+│   │   ├── dashboard/       # Dashboard widgets
+│   │   │   ├── SalaireCard.tsx
+│   │   │   ├── ResteCard.tsx (avec counter animation)
+│   │   │   ├── DepensesChart.tsx
+│   │   │   └── QuickActions.tsx
+│   │   ├── forms/           # Formulaires réutilisables
+│   │   │   ├── DepenseForm.tsx (modal rapide)
+│   │   │   ├── ChargeForm.tsx
+│   │   │   └── RevenuForm.tsx
+│   │   ├── charts/          # Composants graphiques
+│   │   │   ├── PieChart.tsx (Recharts)
+│   │   │   ├── BarChart.tsx
+│   │   │   └── LineChart.tsx
+│   │   ├── layout/          # Layout components
+│   │   │   ├── AppLayout.tsx
+│   │   │   ├── Sidebar.tsx (desktop)
+│   │   │   ├── BottomNav.tsx (mobile)
+│   │   │   └── Header.tsx
+│   │   ├── cycles/          # Gestion cycles
+│   │   │   ├── CycleSelector.tsx
+│   │   │   ├── CycleSummary.tsx
+│   │   │   └── CloseCycleModal.tsx
+│   │   └── animations/      # Composants animés
+│   │       ├── CounterAnimation.tsx
+│   │       ├── ConfettiCelebration.tsx
+│   │       └── PageTransition.tsx
+│   ├── lib/
+│   │   ├── supabase.ts      # Client Supabase
+│   │   ├── calculations.ts  # Logique métier (calcul reste, stats)
+│   │   ├── utils.ts         # Helpers génériques
+│   │   └── constants.ts     # Constantes (couleurs, etc.)
+│   ├── hooks/
+│   │   ├── useAuth.ts       # Hook Supabase auth
+│   │   ├── useCycle.ts      # Hook cycle actif
+│   │   ├── useRevenus.ts    # CRUD revenus
+│   │   ├── useCharges.ts    # CRUD charges
+│   │   ├── useDepenses.ts   # CRUD dépenses
+│   │   ├── useCategories.ts # CRUD catégories
+│   │   ├── useStats.ts      # Statistiques calculées
+│   │   └── useResponsive.ts # Détection device
+│   ├── store/
+│   │   └── index.ts         # Zustand store global
+│   ├── types/
+│   │   └── index.ts         # Types TypeScript
+│   ├── pages/
+│   │   ├── auth/
+│   │   │   ├── Login.tsx
+│   │   │   └── Register.tsx
+│   │   ├── Dashboard.tsx    # Page d'accueil (cycle actif)
+│   │   ├── Configuration.tsx # Revenus + Charges + Catégories
+│   │   ├── Statistics.tsx   # Stats du cycle actif
+│   │   ├── History.tsx      # Historique des cycles
+│   │   └── Comparison.tsx   # Comparaison inter-cycles
+│   ├── styles/
+│   │   └── animations.css   # Animations custom
+│   ├── App.tsx              # Root avec Router + Auth
+│   └── main.tsx
+├── supabase/
+│   ├── migrations/          # Migrations SQL
+│   └── seed.sql             # Données initiales
+├── public/
+│   ├── manifest.json        # PWA manifest
+│   └── icons/               # Icons PWA
+├── .clinerules
+├── .env.example
+├── README.md
+└── package.json
+```
+
+## 🎯 Logique métier (Calculs)
+
+### Calcul du reste disponible
+```typescript
+function calculerReste(cycle: CycleMensuel): number {
+  const { salaire_reel, total_charges, total_depenses } = cycle;
+  return salaire_reel - total_charges - total_depenses;
+}
+```
+
+### Début d'un nouveau cycle
+```typescript
+async function demarrerNouveauCycle(userId: string, salaire: number) {
+  const aujourd'hui = new Date();
+  const premierJour = startOfMonth(aujourd'hui);
+  const dernierJour = endOfMonth(aujourd'hui);
+  
+  // 1. Clôturer le cycle précédent s'il existe
+  await cloturerCycleActif(userId);
+  
+  // 2. Créer nouveau cycle
+  const nouveauCycle = {
+    user_id: userId,
+    annee: aujourd'hui.getFullYear(),
+    mois: aujourd'hui.getMonth() + 1,
+    salaire_reel: salaire,
+    total_charges: await calculerTotalCharges(userId),
+    total_depenses: 0,
+    reste: salaire - await calculerTotalCharges(userId),
+    statut: 'actif',
+    date_debut: premierJour,
+    date_fin: dernierJour,
+  };
+  
+  return await supabase.from('cycles_mensuels').insert(nouveauCycle);
+}
+```
+
+### Clôture d'un cycle
+```typescript
+async function cloturerCycle(cycleId: string) {
+  // 1. Calculer les totaux finaux
+  const totaux = await calculerTotauxCycle(cycleId);
+  
+  // 2. Mettre à jour le cycle
+  await supabase
+    .from('cycles_mensuels')
+    .update({
+      total_depenses: totaux.depenses,
+      reste: totaux.reste,
+      statut: 'cloture',
+    })
+    .eq('id', cycleId);
+}
+```
+
+## ✅ Règles de développement
+
+### Code quality
+1. **TypeScript strict** : Tous les fichiers en `.tsx` ou `.ts`
+2. **Pas de `any`** : Utilise des types explicites ou `unknown`
+3. **ESLint** : Respecte les règles de linting
+4. **Prettier** : Code formaté automatiquement
+5. **Comments** : Commente les logiques complexes uniquement
+
+### Composants
+1. **Fonctionnels uniquement** : Pas de class components
+2. **Props typées** : Interface pour chaque composant avec JSDoc si complexe
+3. **Déstructuration** : `({ prop1, prop2 }: Props) => {}`
+4. **Exports named** : Préférer `export const Component`
+5. **Petit et focalisé** : Un composant = une responsabilité
+
+### Performance
+1. **Mémoïsation** : `useMemo` pour calculs lourds (> 100ms)
+2. **Callbacks** : `useCallback` pour fonctions passées en props
+3. **Lazy loading** : `React.lazy()` pour routes non critiques
+4. **Keys uniques** : Utilise des IDs UUID, jamais des index
+5. **Évite re-renders** : Zustand pour état global, context pour local
+
+### Styling avec Tailwind
+1. **Tailwind uniquement** : Pas de CSS/SCSS externe sauf animations.css
+2. **Classes utilitaires** : Compose avec Tailwind
+3. **Responsive** : Mobile-first (`sm:`, `md:`, `lg:`, `xl:`)
+4. **Dark mode** : `dark:` prefix systématique sur TOUTES les classes de couleur
+5. **shadcn/ui** : Utilise les composants existants avant de créer
+6. **Animations** : Combine Tailwind + Framer Motion
+
+### Animations avec Framer Motion
+```typescript
+// Exemple de variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+  transition: { duration: 0.3 }
+};
+
+// Page transitions
+<motion.div variants={fadeInUp} initial="initial" animate="animate" exit="exit">
+  {children}
+</motion.div>
+```
+
+### Supabase patterns
+1. **Auth** : Utilise `useAuth` hook partout
+2. **RLS** : Row Level Security activé sur TOUTES les tables
+3. **Realtime** : Subscribe aux changements pour sync temps réel
+4. **Error handling** : Try/catch + toast d'erreur user-friendly
+5. **Types générés** : Utilise `supabase gen types` pour typage auto
+
+### Storage Supabase
+1. **Queries** : Utilise React Query pour cache et optimistic updates
+2. **Mutations** : Invalide le cache après mutation
+3. **Subscriptions** : Subscribe aux tables pour live updates
+4. **Offline** : Gère les cas sans connexion avec états de loading
+
+## 🚀 Workflow de développement
+
+### Phase 1 - Setup (Jour 1-2)
+1. ✅ Init Vite + React + TypeScript + Tailwind
+2. ✅ Setup Supabase (compte + projet + tables)
+3. ✅ Install shadcn/ui + composants de base
+4. ✅ Install Framer Motion + react-hot-toast + react-confetti
+5. ✅ Setup auth Supabase
+6. ✅ Créer types TypeScript
+7. ✅ Setup Zustand store
+8. ✅ Layout de base (Sidebar + BottomNav + Header)
+
+### Phase 2 - Auth & Onboarding (Jour 3)
+1. ✅ Pages Login/Register
+2. ✅ Protected routes
+3. ✅ Onboarding (config initiale : revenus + charges)
+4. ✅ Création premier cycle
+
+### Phase 3 - Dashboard (Jour 4-5)
+1. ✅ Carte Salaire avec animation counter
+2. ✅ Carte Reste disponible (gros chiffre)
+3. ✅ Liste dépenses récentes
+4. ✅ Graphique dépenses par catégorie (pie chart)
+5. ✅ Quick actions (bouton ajout dépense)
+
+### Phase 4 - Saisie rapide (Jour 6)
+1. ✅ Modal/Drawer ajout dépense (< 5 sec)
+2. ✅ Montant (auto-focus)
+3. ✅ Catégories visuelles (grid avec icons)
+4. ✅ Date (default aujourd'hui)
+5. ✅ Confetti + toast confirmation
+6. ✅ Update temps réel du reste
+
+### Phase 5 - Configuration (Jour 7-8)
+1. ✅ CRUD Revenus
+2. ✅ CRUD Charges fixes
+3. ✅ CRUD Catégories personnalisées
+4. ✅ Preview calculs en temps réel
+
+### Phase 6 - Gestion Cycles (Jour 9-10)
+1. ✅ Sélecteur de cycle (dropdown mois/année)
+2. ✅ Modal "Nouveau mois" (confirmer salaire)
+3. ✅ Clôturer cycle (archivage)
+4. ✅ Calcul automatique totaux
+
+### Phase 7 - Historique & Stats (Jour 11-12)
+1. ✅ Page Historique (liste cycles clôturés)
+2. ✅ Détail cycle passé (read-only)
+3. ✅ Page Statistiques (graphs animés)
+4. ✅ Comparaison cycles (variations %)
+
+### Phase 8 - Polish & Animations (Jour 13-14)
+1. ✅ Animations Framer Motion partout
+2. ✅ Dark mode toggle smooth
+3. ✅ Transitions pages
+4. ✅ Skeleton loading states
+5. ✅ PWA (manifest + service worker)
+6. ✅ Tests responsive mobile/tablet/desktop
+
+### Phase 9 - Tests & Optimizations (Jour 15)
+1. ✅ Tests manuels (flows complets)
+2. ✅ Performance audit (Lighthouse)
+3. ✅ Accessibilité (a11y audit)
+4. ✅ Fix bugs critiques
+
+## 🎯 Priorités fonctionnelles
+
+### Must-have (MVP)
+- ✅ Auth Supabase
+- ✅ Système de cycles mensuels
+- ✅ Configuration revenus/charges
+- ✅ Ajout rapide dépenses (< 5 sec)
+- ✅ Calcul automatique du reste
+- ✅ Dashboard avec vue temps réel
+- ✅ Historique des cycles
+- ✅ Statistiques mensuelles avec graphiques
+- ✅ Dark mode
+- ✅ Responsive mobile + tablet + desktop
+
+### Nice-to-have (Post-MVP)
+- 🔄 Export PDF/CSV d'un cycle
+- 🔄 Notifications push (rappel saisie)
+- 🔄 Budget alerts (dépassement catégorie)
+- 🔄 Multi-currency
+- 🔄 Tags personnalisés sur dépenses
+- 🔄 Recherche/filtres avancés
+
+### Future (V2)
+- 🔮 Partage de cycles (entre users)
+- 🔮 Objectifs d'épargne
+- 🔮 Prédictions IA (budget recommandé)
+- 🔮 Scan reçus (OCR)
+- 🔮 Mobile app native (React Native)
+
+## 💬 Style de communication
+
+### Quand tu proposes du code
+- Explique **POURQUOI** ce choix technique
+- Montre des alternatives si pertinent
+- Anticipe les questions
+- Propose des améliorations proactives
+- Mentionne les trade-offs
+
+### Quand l'utilisateur demande quelque chose
+- Demande des clarifications si besoin (ne devine pas)
+- Propose la meilleure solution technique
+- Explique les implications (perf, complexité, maintenance)
+- Respecte le stack validé (pas de changement sans accord explicite)
+
+### Ton général
+- **Professionnel** mais accessible
+- **Proactif** : Suggère des améliorations non demandées
+- **Pédagogue** : Explique les concepts si nécessaire
+- **Pragmatique** : Focus sur le MVP, note le "nice-to-have" pour plus tard
+- **Enthousiaste** : Montre de l'intérêt pour le projet
+
+## 🔒 Contraintes absolues
+
+### ❌ NE JAMAIS
+- Utiliser jQuery ou librairies obsolètes
+- Créer des class components React
+- Ajouter du CSS externe (uniquement Tailwind + animations.css)
+- Ignorer TypeScript (pas de `any` sauf cas extrême documenté)
+- Oublier le responsive mobile (mobile-first !)
+- Négliger l'accessibilité (a11y)
+- Commit des secrets (.env dans .gitignore)
+- Ignorer les erreurs Supabase (toujours try/catch + log)
+- Faire des mutations sans optimistic updates
+- Oublier le dark mode sur les nouvelles UI
+
+### ✅ TOUJOURS
+- Typer toutes les props, states, et fonctions
+- Utiliser les hooks React modernes
+- Penser mobile-first (design du plus petit au plus grand)
+- Commenter le code complexe (pourquoi, pas quoi)
+- Respecter la structure du projet (fichiers aux bons endroits)
+- Tester mentalement le dark mode sur nouveau code
+- Vérifier RLS sur nouvelles tables Supabase
+- Ajouter loading states et error handling
+- Animer les transitions importantes (Framer Motion)
+- Optimiser les images (format WebP, lazy load)
+
+## 📚 Ressources & Documentation
+
+### Officielles
+- React : https://react.dev
+- TypeScript : https://www.typescriptlang.org/docs
+- Tailwind CSS : https://tailwindcss.com/docs
+- shadcn/ui : https://ui.shadcn.com
+- Framer Motion : https://www.framer.com/motion
+- Supabase : https://supabase.com/docs
+- Zustand : https://github.com/pmndrs/zustand
+- React Router : https://reactrouter.com
+- Recharts : https://recharts.org
+- React Hook Form : https://react-hook-form.com
+- Zod : https://zod.dev
+
+### Guides
+- Supabase Auth : https://supabase.com/docs/guides/auth
+- Supabase RLS : https://supabase.com/docs/guides/auth/row-level-security
+- PWA : https://vite-pwa-org.netlify.app
+- Framer Motion Animations : https://www.framer.com/motion/animation
+
+## 🎊 Philosophie du projet
+
+> "Simplicité, rapidité, élégance, et plaisir visuel"
+
+L'app doit être :
+- **Simple** : Interface intuitive, zéro friction
+- **Rapide** : Ajout de dépense en < 5 secondes
+- **Belle** : Design moderne, animé, qui donne envie
+- **Privée** : Données chiffrées, RLS strict
+- **Accessible** : Utilisable par tous (a11y)
+- **Fun** : Micro-animations qui rendent l'usage agréable
+- **Fiable** : Offline-ready, sync automatique
+
+### Principe de conception
+Chaque écran doit répondre à UNE question principale :
+- **Dashboard** : "Combien il me reste ce mois ?"
+- **Ajout dépense** : "J'ai dépensé X€ en Y"
+- **Historique** : "Combien j'ai dépensé le mois dernier ?"
+- **Statistiques** : "Où va mon argent ?"
+- **Configuration** : "Ajuster mes revenus/charges"
+
+---
+
+**Ready to build something beautiful! 🚀✨**
