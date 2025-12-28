@@ -207,8 +207,9 @@ export default function History() {
           ) : (
             cycles.map((cycle, index) => {
               const salaire = typeof cycle.salaire_reel === 'string' ? parseFloat(cycle.salaire_reel) : cycle.salaire_reel;
+              const charges = cycle.total_charges || 0;
               const depenses = cycle.total_depenses || 0;
-              const reste = salaire - depenses;
+              const reste = salaire - charges - depenses;
               const devise = cycle.devise || 'EUR'; // Get currency from cycle
               const isExpanded = expandedCycle === cycle.id;
               const stats = cycleStats[cycle.id] || [];
@@ -241,8 +242,11 @@ export default function History() {
                           <span className="text-slate-300 text-sm">
                             {formatCurrency(salaire, devise)} salaire
                           </span>
+                          <span className="text-amber-400 text-sm">
+                            -{formatCurrency(charges, devise)} charges
+                          </span>
                           <span className="text-rose-400 text-sm">
-                            -{formatCurrency(depenses, devise)} dépensé
+                            -{formatCurrency(depenses, devise)} dépenses
                           </span>
                           <span className={`text-sm font-semibold ${reste >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {reste >= 0 ? '+' : ''}{formatCurrency(reste, devise)}
